@@ -1,0 +1,4 @@
+[flake8]
+per-file-ignores =
+    ninite_main/applications.py: E501
+    ninite_main/messages.py: E501
