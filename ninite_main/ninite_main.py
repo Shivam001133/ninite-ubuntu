@@ -1,8 +1,10 @@
 from ninite_main import applications
 from ninite_main import messages as mess
 from urllib.parse import urlparse
+from ninite_main import config as conf
 import requests
 from datetime import datetime
+import shutil
 import os
 from tqdm import tqdm
 import logging
@@ -12,16 +14,36 @@ logger = logging.getLogger(__name__)
 
 
 class NINITE:
+    """
+    The NINITE class manages software downloads and installations.
+
+    It provides functionalities to download files from URLs, display
+    text-based menus for user interaction, prompt for user input, and
+    handle DEB package installations.
+    """
     def __init__(self) -> None:
-        self.DOWNLOAD_DIRECTORY = applications.DOWNLOAD_DIRECTORY
+        self.DOWNLOAD_DIRECTORY = conf.DOWNLOAD_DIRECTORY
         self.APPLICATION = applications.APPLICATION
 
-    def generate_unique_filename(self, url):
-        pass
-
-
-
     def download_file(self, url):
+        """
+        Downloads a file from the specified URL and saves it to the
+        download directory.
+
+        This function retrieves a file from a given URL and stores it in the
+        class's download directory.
+        It utilizes a progress bar to display the download progress.
+
+        Args:
+            url (str): The URL of the file to download.
+
+        Returns:
+            str: The path to the downloaded file.
+
+        Raises:
+            Exception: If the download fails or the filename extraction
+            encounters issues.
+        """
         response = requests.get(url, stream=True)
         total_size = int(response.headers.get('content-length', 0))
         block_size = 1024  # 1 Kibibyte
@@ -34,9 +56,8 @@ class NINITE:
         url_path = urlparse(url).path
         filename = os.path.basename(url_path)
 
-        # If filename is empty or just '/', generate a unique filename
-        #if not filename or filename == '/' or not filename.endwith(".deb"):
-           # filename = 
+        if not filename or filename == '/' or not filename.endswith(".deb"):
+            filename = f"{datetime.now()}.deb".replace(" ", "")
 
         file_path = os.path.join(self.DOWNLOAD_DIRECTORY, filename)
 
@@ -51,10 +72,27 @@ class NINITE:
             for data in response.iter_content(block_size):
                 f.write(data)
                 progress_bar.update(len(data))
-
+        print("\n")
         return file_path
 
     def display_options(self):
+        """Displays a text-based menu for the user to select options.
+
+        This function utilizes the curses library to create a user interface
+        where the user can navigate through available options and select
+        multiple choices.
+
+        Args:
+            self: An instance of the class using this function.
+                It's assumed to have an `APPLICATION` attribute
+                containing a dictionary mapping option names to
+                their corresponding functionalities.
+
+        Returns:
+            A list of strings representing the option keys selected by the
+            user.
+        """
+
         stdscr = curses.initscr()
         curses.noecho()
         curses.cbreak()
@@ -73,7 +111,7 @@ class NINITE:
         current_selection = set()
         current_idx = 0
         selecting = False
-        hovering = False
+        # hovering = False
 
         while True:
             stdscr.clear()
@@ -140,7 +178,7 @@ class NINITE:
                             current_selection.remove(current_idx)
                         else:
                             current_selection.add(current_idx)
-                        hovering = False
+                        # hovering = False
                     else:
                         selecting = True
                 elif key == ord('r'):  # Remove selected option
@@ -176,30 +214,94 @@ class NINITE:
         return selected_options
 
     def get_user_choice(self):
-        choice = input("Enter your choice: ").strip()
-        if ',' in choice:
-            input_data = [data.strip() for data in choice.split(',') if data]
-            return [int(data) for data in list(set(input_data)) if data]
-        else:
+        """Prompts the user for comma-separated integer choices.
+
+        This function prompts the user to enter a comma-separated list of
+        integers. It handles various input formats, including single values,
+        spaces around commas, and leading/trailing spaces. It returns a
+        unique, sorted list of the integers.
+
+        If an invalid input is encountered (e.g., non-numeric characters, empty
+        strings), a clear error message is printed and the user is prompted to
+        re-enter their choice.
+
+        Args:
+            self (object): The calling object (likely used for logging
+            purposes).
+
+        Returns:
+            list[int]: A unique, sorted list of the integers provided by the
+            user.
+
+        Raises:
+            ValueError: If the user enters an empty string or non-numeric
+            characters.
+        """
+
+        while True:
+            choice = input().strip()
+
+            if not choice:  # Check for empty string
+                print("Invalid input: Please enter comma-separated integers.")
+                continue
+
             try:
-                input_data = [data.strip() for data in choice.split(
-                    ',') if data]
-                print("input", input_data)
-                input_data = [int(data) for data in list(
-                    set(input_data)) if data]
-                print("input", input_data)
-                return input_data
-            except Exception as e:
-                logger.error(f"Encounter his error: {e} ")
+                # Handle various comma and whitespace formats
+                input_data = [int(data.strip()) for data in choice.split(',')
+                              if data.strip()]
+                return sorted(list(set(input_data)))  # Unique and sorted
+            except ValueError as e:
+                print(f"Invalid input: {e}. Please enter only "
+                      "comma-separated integers.")
 
-    def deb_installer(self):
-        import subprocess
-        BASE_DIE = os.getpwd()
+    def pakage_manager(self) -> None:
+        """
+        Installs all DEB packages found in the configured download directory.
 
-        d_dir = BASE_DIE + "/download"
-        files_and_directories = os.listdir(d_dir)
-        for file_or_directory in files_and_directories:
-            if file_or_directory.endswith(".deb"):
-                subprocess.run[f'sudo dpkg -i download/{file_or_directory}']
-            else:
-                logger.info(f"ihis file `{file_or_directory}` is not deb file")
+        This function iterates through all files with the `.deb` extension
+        within the download directory specified by `conf.DOWNLOAD_DIRECTORY`.
+        For each DEB package, it attempts the following actions:
+
+        1. Installs the package using `sudo dpkg -i <package_name>`.
+        2. Removes the installed package file from the download directory.
+
+        If any errors occur during installation, the error message is logged
+        using the provided `logger` object. If the download directory does not
+        exist, an informative message is logged, indicating that either no DEB
+        packages were downloaded or an
+        issue might have occurred.
+
+        **Raises:**
+
+        - `OSError`: If an error occurs while interacting with the file system
+                    (e.g., issues with directory permissions, file existence).
+
+        **Arguments:**
+
+        - None
+
+        **Returns:**
+
+        - None
+
+        **Pre-conditions:**
+
+        - The `conf` module must be imported and provide a constant
+            `conf.DOWNLOAD_DIRECTORY` containing the path to the download
+            directory.
+        - A logger object (e.g., from the `logging` module) must be available
+            for error logging.
+        """
+
+        if os.path.exists(conf.DOWNLOAD_DIRECTORY):
+            deb_pakages = os.listdir(conf.DOWNLOAD_DIRECTORY)
+            for pakage in deb_pakages:
+                try:
+                    os.system(f"sudo dpkg -i download/{pakage}")
+                    os.rmdir(f"download/{pakage}")
+                except Exception as e:
+                    logger.error(f"Encounter this error: {e}")
+
+            shutil.rmtree(conf.DOWNLOAD_DIRECTORY)
+        else:
+            logger.info(mess.DOWNLOAD_FOLDER_NOT_FOUND)

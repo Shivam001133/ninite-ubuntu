@@ -1,12 +1,7 @@
-SNAP = 'sudo apt install snapd'
-
-DOWNLOAD_DIRECTORY = '.download'
-
 APPLICATION = {
-    "VS Code": {
+    "VS bash_code": {
         "bash": False,
-        'url': 'https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64',
-        
+        'url': 'https://bash_code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64',
     },
     "Sublime Text": {
         "bash": False,
@@ -15,7 +10,7 @@ APPLICATION = {
     },
     "Google Chrome": {
         "bash": False,
-        'url': 'https://www.google.com/chrome/next-steps.html?brand=CHBD&statcb=0&installdataindex=empty&defaultbrowser=0#',
+        'url': 'https://www.google.com/chrome/next-steps.html?brand=CHBD&statcb=0&methoddataindex=empty&defaultbrowser=0#',
         'filename': 'google_chrome.deb'
     },
     "Microsoft Edge": {
@@ -30,35 +25,35 @@ APPLICATION = {
     },
     "Brave": {
         "bash": True,
-        "install": {
+        "method": {
             "apt": True,
             "snap": False,
             "curl": True
         },
-        "code": [
-            'sudo apt install curl',
-            'sudo curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg',
-            'echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] https://brave-browser-apt-release.s3.brave.com/ stable main"|sudo tee /etc/apt/sources.list.d/brave-browser-release.list',
-            'sudo apt update',
-            'sudo apt install brave-browser'
-        ]
+        "bash_code": (
+            'sudo apt method curl'
+            'sudo curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg'
+            'echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] https://brave-browser-apt-release.s3.brave.com/ stable main"|sudo tee /etc/apt/sources.list.d/brave-browser-release.list'
+            'sudo apt update'
+            'sudo apt method brave-browser'
+            )
     },
     "Postman": {
         "bash": True,
-        "install": {
+        "method": {
             "apt": False,
             "snap": True,
             "curl": False
         },
-        "code": 'sudo snap install postman'
+        "bash_code": 'sudo snap method postman'
     },
     "Vlc Media Player": {
         "bash": True,
-        "install": {
+        "method": {
             "apt": False,
             "snap": True,
             "curl": False
         },
-        "code": 'sudo snap install vlc'
+        "bash_code": 'sudo snap method vlc'
     },
 }
